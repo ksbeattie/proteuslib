@@ -20,8 +20,29 @@ env:
   PYTEST_ADDOPTS: "--color=yes"
 
 jobs:
+
+  code-formatting:
+    name: Check code formatting (Black)
+    # OS and/or Python version don't make a difference, so we choose ubuntu and 3.8 as defaults
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+      - name: Install Black
+        # unlike the other jobs, we don't need to install watertap and/or all the dev dependencies
+        run: |
+          # TODO get the exact version from requirements-dev.txt
+          black_requirement="black"
+          pip --no-cache-dir install --progress-bar off "$black_requirement"
+      - name: Run Black to verify that the committed code has been formatted
+        run: |
+          black --check .
+
   tests:
     name: Tests (py${{ matrix.python-version }}/${{ matrix.os }})
+    needs: [code-formatting]
     runs-on: ${{ matrix.os-version }}
 # TODO: Grab cloud database password from encrypted repo secrets
 # TODO: and place in environment so tests can use it.
@@ -136,6 +157,7 @@ jobs:
         make -C docs linkcheck -d
 
   user-mode-pytest:
+    needs: [code-formatting]
     name: pytest (user mode) (py${{ matrix.python-version }}/${{ matrix.os }})
     runs-on: ${{ matrix.os-version }}
     strategy:
